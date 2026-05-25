@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revisão de Deals — Florida Auto Center</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0d12;
+    --surface: #111520;
+    --card: #161c2a;
+    --border: #1e2840;
+    --border-active: #2e4a8a;
+    --blue: #2563eb;
+    --blue-light: #3b82f6;
+    --blue-glow: rgba(37,99,235,0.15);
+    --green: #10b981;
+    --green-glow: rgba(16,185,129,0.12);
+    --red: #ef4444;
+    --red-glow: rgba(239,68,68,0.12);
+    --amber: #f59e0b;
+    --amber-glow: rgba(245,158,11,0.12);
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --text-dim: #94a3b8;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 20px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-inner { max-width: 680px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .header-logo {
+    width: 32px; height: 32px; background: var(--amber);
+    border-radius: 8px; display: flex; align-items: center;
+    justify-content: center; font-size: 14px; font-weight: 700; color: #0a0d12; flex-shrink: 0;
+  }
+  .header-title { font-size: 15px; font-weight: 600; }
+  .header-sub { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; margin-top: 2px; }
+  .header-count {
+    margin-left: auto;
+    background: var(--blue-glow);
+    border: 1px solid var(--border-active);
+    color: var(--blue-light);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  .main { max-width: 680px; margin: 0 auto; padding: 24px 20px; }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 64px 20px;
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 16px; }
+  .empty-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .empty-sub { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+  /* DEAL CARD (list) */
+  .deal-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .deal-card:hover { border-color: var(--border-active); transform: translateY(-1px); }
+  .deal-status-dot {
+    width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0;
+  }
+  .dot-pending { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .dot-approved { background: var(--green); }
+  .dot-blocked { background: var(--red); }
+
+  .deal-info { flex: 1; }
+  .deal-id-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .deal-id { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--blue-light); font-weight: 500; }
+  .deal-veiculo { font-size: 15px; font-weight: 600; color: var(--text); }
+  .deal-meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .deal-pendentes {
+    margin-top: 8px;
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .tag-pendente {
+    background: var(--red-glow);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: var(--red);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+  .tag-ok {
+    background: var(--green-glow);
+    border: 1px solid rgba(16,185,129,0.2);
+    color: var(--green);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .tag-blocked {
+    background: var(--red-glow);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: var(--red);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .deal-arrow { color: var(--text-muted); font-size: 16px; margin-top: 2px; }
+
+  /* DETAIL VIEW */
+  .detail-view { display: none; }
+  .detail-view.show { display: block; animation: fadeIn 0.25s ease; }
+  .list-view.hidden { display: none; }
+
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+  .back-btn {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--text-muted); font-size: 14px;
+    cursor: pointer; margin-bottom: 20px;
+    background: none; border: none; font-family: 'DM Sans', sans-serif;
+    padding: 0;
+  }
+  .back-btn:hover { color: var(--blue-light); }
+
+  .detail-header {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .detail-deal-id { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .detail-veiculo { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .detail-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .detail-meta-item { }
+  .detail-meta-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+  .detail-meta-value { font-size: 14px; color: var(--text); font-weight: 500; }
+
+  .section-title-sm {
+    font-size: 11px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin: 20px 0 10px;
+  }
+
+  .doc-list { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; }
+  .doc-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .doc-row:last-child { border-bottom: none; }
+  .doc-status { font-size: 14px; flex-shrink: 0; }
+  .doc-name { font-size: 14px; color: var(--text); flex: 1; }
+  .doc-name.pendente { color: var(--red); }
+
+  /* REVIEW ACTIONS */
+  .review-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .review-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+
+  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .action-btn {
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .action-btn.approve {
+    border-color: var(--green);
+    background: var(--green-glow);
+    color: var(--green);
+  }
+  .action-btn.approve:hover { background: rgba(16,185,129,0.2); }
+  .action-btn.block {
+    border-color: var(--red);
+    background: var(--red-glow);
+    color: var(--red);
+  }
+  .action-btn.block:hover { background: rgba(239,68,68,0.2); }
+
+  /* MOTIVOS */
+  .motivos-section { margin-top: 12px; display: none; }
+  .motivos-section.show { display: block; animation: fadeIn 0.2s ease; }
+  .motivos-label { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+  .motivo-check {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer;
+  }
+  .motivo-check:last-of-type { border-bottom: none; }
+  .motivo-check input[type="checkbox"] {
+    appearance: none; -webkit-appearance: none;
+    width: 18px; height: 18px; min-width: 18px;
+    border: 1.5px solid var(--border-active);
+    border-radius: 4px; background: var(--surface);
+    cursor: pointer; position: relative; transition: all 0.15s;
+  }
+  .motivo-check input[type="checkbox"]:checked {
+    background: var(--red); border-color: var(--red);
+  }
+  .motivo-check input[type="checkbox"]:checked::after {
+    content: ''; position: absolute;
+    left: 4px; top: 1px; width: 7px; height: 5px;
+    border-left: 2px solid white; border-bottom: 2px solid white;
+    transform: rotate(-45deg);
+  }
+  .motivo-label { font-size: 13px; color: var(--text); }
+
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    resize: none;
+    margin-top: 12px;
+  }
+  textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
+
+  .btn-confirm {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+    margin-top: 12px;
+  }
+  .btn-confirm.green { background: var(--green); color: white; }
+  .btn-confirm.red { background: var(--red); color: white; }
+  .btn-confirm:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* TELEGRAM PREVIEW */
+  .telegram-preview {
+    background: #1a2535;
+    border: 1px solid #243352;
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 16px;
+    display: none;
+  }
+  .telegram-preview.show { display: block; animation: fadeIn 0.2s ease; }
+  .tg-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+  .tg-msg {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #a8c7fa;
+    line-height: 1.8;
+    white-space: pre-wrap;
+  }
+  .btn-copy {
+    margin-top: 12px;
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--border-active);
+    color: var(--blue-light);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-copy:hover { background: var(--blue-glow); }
+
+  /* STATUS BADGE */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .status-badge.pending { background: var(--amber-glow); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+  .status-badge.approved { background: var(--green-glow); color: var(--green); border: 1px solid rgba(16,185,129,0.3); }
+  .status-badge.blocked { background: var(--red-glow); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+  .obs-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="header-logo">G</div>
+    <div>
+      <div class="header-title">Revisão de Deals</div>
+      <div class="header-sub">Florida Auto Center · Gerência</div>
+    </div>
+    <div class="header-count" id="headerCount">0 na fila</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- LIST VIEW -->
+  <div class="list-view" id="listView">
+    <div id="emptyState" class="empty-state" style="display:none">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">Fila vazia</div>
+      <div class="empty-sub">Nenhuma conferência aguardando revisão.<br>Os deals aparecerão aqui conforme os vendedores enviarem.</div>
+    </div>
+    <div id="dealList"></div>
+  </div>
+
+  <!-- DETAIL VIEW -->
+  <div class="detail-view" id="detailView">
+    <button class="back-btn" onclick="goBack()">← Voltar para fila</button>
+
+    <div class="detail-header">
+      <div class="detail-deal-id" id="det-deal-id"></div>
+      <div class="detail-veiculo" id="det-veiculo"></div>
+      <div id="det-status-badge"></div>
+      <div class="detail-meta-grid">
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">Vendedor</div>
+          <div class="detail-meta-value" id="det-vendedor"></div>
+        </div>
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">VIN</div>
+          <div class="detail-meta-value" id="det-vin" style="font-family:'DM Mono',monospace; font-size:12px"></div>
+        </div>
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">Financiamento</div>
+          <div class="detail-meta-value" id="det-finance"></div>
+        </div>
+        <div class="detail-meta-item">
+          <div class="detail-meta-label">Enviado em</div>
+          <div class="detail-meta-value" id="det-timestamp"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOCS -->
+    <div class="section-title-sm">Documentação conferida pelo vendedor</div>
+    <div class="doc-list" id="det-docs"></div>
+
+    <!-- OBS -->
+    <div id="obs-section" style="display:none">
+      <div class="section-title-sm">Observação do vendedor</div>
+      <div class="obs-box" id="det-obs"></div>
+    </div>
+
+    <!-- REVIEW ACTIONS (só se pendente) -->
+    <div id="reviewActions">
+      <div class="section-title-sm">Sua revisão</div>
+      <div class="review-card">
+        <div class="action-grid">
+          <button class="action-btn approve" onclick="selectAction('approve')">✓ Aprovar deal</button>
+          <button class="action-btn block" onclick="selectAction('block')">✗ Bloquear</button>
+        </div>
+
+        <!-- MOTIVOS BLOQUEIO -->
+        <div class="motivos-section" id="motivosSection">
+          <div class="motivos-label">Motivos do bloqueio (marque todos que aplicam):</div>
+          <label class="motivo-check"><input type="checkbox" value="Documentação incompleta"> <span class="motivo-label">Documentação incompleta</span></label>
+          <label class="motivo-check"><input type="checkbox" value="Pagamento não confirmado"> <span class="motivo-label">Pagamento não confirmado</span></label>
+          <label class="motivo-check"><input type="checkbox" value="GPS não instalado"> <span class="motivo-label">GPS não instalado</span></label>
+          <label class="motivo-check"><input type="checkbox" value="Trade-in com pendência"> <span class="motivo-label">Trade-in com pendência</span></label>
+          <label class="motivo-check"><input type="checkbox" value="Parcelamento sem documentação"> <span class="motivo-label">Parcelamento sem documentação</span></label>
+          <label class="motivo-check"><input type="checkbox" value="Recourse Agreement faltando (Lendbuzz)"> <span class="motivo-label">Recourse Agreement faltando (Lendbuzz)</span></label>
+          <textarea id="obs-gerente" rows="2" placeholder="Observação adicional (opcional)…"></textarea>
+        </div>
+
+        <button class="btn-confirm" id="btnConfirm" disabled onclick="confirmReview()">
+          Selecione uma ação →
+        </button>
+      </div>
+
+      <!-- TELEGRAM PREVIEW -->
+      <div class="telegram-preview" id="tgPreview">
+        <div class="tg-label">📨 Mensagem para o Telegram</div>
+        <div class="tg-msg" id="tgMsg"></div>
+        <button class="btn-copy" onclick="copyMsg()">Copiar mensagem</button>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:8px; text-align:center">
+          Integração automática com Telegram em breve
+        </div>
+      </div>
+    </div>
+
+    <!-- SE JÁ REVISADO -->
+    <div id="alreadyReviewed" style="display:none">
+      <div class="section-title-sm">Resultado</div>
+      <div class="review-card" id="reviewedCard">
+        <div id="reviewedContent"></div>
+      </div>
+    </div>
+
+  </div><!-- detail-view -->
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxb-xU0sjMzl65MoGlYKIaGLuF0Q_NpyW6Slsqtt2sRG4I2kVxOv7Lx9j6dz6aT_pYj9w/exec';
+
+let allDeals = [];
+let currentDealId = null;
+let currentAction = null;
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('pt-BR') + ' · ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function loadDeals() {
+  document.getElementById('headerCount').textContent = 'carregando…';
+  try {
+    const res = await fetch(`${SCRIPT_URL}?action=getDeals`);
+    const data = await res.json();
+    if (data.success) {
+      allDeals = data.deals || [];
+      renderList();
+    }
+  } catch(e) {
+    document.getElementById('headerCount').textContent = 'erro';
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('emptyState').querySelector('.empty-sub').textContent = 'Não foi possível carregar os deals. Verifique a conexão.';
+  }
+}
+
+function renderList() {
+  const pending = allDeals.filter(d => d.status === 'aguardando_revisao');
+  document.getElementById('headerCount').textContent = pending.length + ' na fila';
+
+  const list = document.getElementById('dealList');
+  list.innerHTML = '';
+
+  if (allDeals.length === 0) {
+    document.getElementById('emptyState').style.display = 'block';
+    return;
+  }
+  document.getElementById('emptyState').style.display = 'none';
+
+  if (pending.length > 0) {
+    const label = document.createElement('div');
+    label.className = 'section-title-sm';
+    label.textContent = 'Aguardando revisão';
+    list.appendChild(label);
+    pending.forEach(deal => list.appendChild(buildDealCard(deal)));
+  }
+
+  const reviewed = allDeals.filter(d => d.status !== 'aguardando_revisao');
+  if (reviewed.length > 0) {
+    const label = document.createElement('div');
+    label.className = 'section-title-sm';
+    label.style.marginTop = '24px';
+    label.textContent = 'Revisados';
+    list.appendChild(label);
+    reviewed.forEach(deal => list.appendChild(buildDealCard(deal)));
+  }
+}
+
+function buildDealCard(deal) {
+  const card = document.createElement('div');
+  card.className = 'deal-card';
+  card.onclick = () => openDeal(deal.id);
+
+  const dotClass = deal.status === 'aguardando_revisao' ? 'dot-pending'
+    : deal.status === 'aprovado' ? 'dot-approved' : 'dot-blocked';
+
+  const pendsHtml = deal.pendentes?.length > 0
+    ? deal.pendentes.slice(0, 3).map(p => `<span class="tag-pendente">${p.split(' — ')[0]}</span>`).join('') +
+      (deal.pendentes.length > 3 ? `<span class="tag-pendente">+${deal.pendentes.length - 3} mais</span>` : '')
+    : '';
+
+  const statusTag = deal.status === 'aprovado'
+    ? '<span class="tag-ok">✓ Aprovado</span>'
+    : deal.status === 'bloqueado'
+    ? '<span class="tag-blocked">✗ Bloqueado</span>'
+    : '';
+
+  card.innerHTML = `
+    <div class="deal-status-dot ${dotClass}"></div>
+    <div class="deal-info">
+      <div class="deal-id-row"><span class="deal-id">${deal.id}</span>${statusTag}</div>
+      <div class="deal-veiculo">${deal.veiculo}</div>
+      <div class="deal-meta">${deal.vendedor} · ${formatDate(deal.timestamp)}</div>
+      ${pendsHtml ? `<div class="deal-pendentes">${pendsHtml}</div>` : ''}
+    </div>
+    <div class="deal-arrow">›</div>
+  `;
+  return card;
+}
+
+function openDeal(id) {
+  const deal = allDeals.find(d => d.id === id);
+  if (!deal) return;
+  currentDealId = id;
+  currentAction = null;
+
+  document.getElementById('det-deal-id').textContent = deal.id + ' · ' + deal.vin;
+  document.getElementById('det-veiculo').textContent = deal.veiculo;
+  document.getElementById('det-vendedor').textContent = deal.vendedor;
+  document.getElementById('det-vin').textContent = deal.vin;
+  document.getElementById('det-finance').textContent = deal.finance || '—';
+  document.getElementById('det-timestamp').textContent = formatDate(deal.timestamp);
+
+  const badgeMap = {
+    aguardando_revisao: '<span class="status-badge pending">● Aguardando revisão</span>',
+    aprovado: '<span class="status-badge approved">✓ Aprovado</span>',
+    bloqueado: '<span class="status-badge blocked">✗ Bloqueado</span>',
+  };
+  const badgeEl = document.getElementById('det-status-badge');
+  badgeEl.innerHTML = badgeMap[deal.status] || '';
+  badgeEl.style.marginTop = '10px';
+
+  const docsEl = document.getElementById('det-docs');
+  docsEl.innerHTML = (deal.docs || []).map(d => `
+    <div class="doc-row">
+      <div class="doc-status">${d.status === 'ok' ? '✅' : '❌'}</div>
+      <div class="doc-name ${d.status !== 'ok' ? 'pendente' : ''}">${d.doc}</div>
+    </div>
+  `).join('') || '<div class="doc-row"><div class="doc-name" style="color:var(--text-muted)">Nenhum documento registrado</div></div>';
+
+  if (deal.obs) {
+    document.getElementById('obs-section').style.display = 'block';
+    document.getElementById('det-obs').textContent = deal.obs;
+  } else {
+    document.getElementById('obs-section').style.display = 'none';
+  }
+
+  const reviewActions = document.getElementById('reviewActions');
+  const alreadyReviewed = document.getElementById('alreadyReviewed');
+
+  if (deal.status === 'aguardando_revisao') {
+    reviewActions.style.display = 'block';
+    alreadyReviewed.style.display = 'none';
+    document.getElementById('motivosSection').classList.remove('show');
+    document.getElementById('tgPreview').classList.remove('show');
+    document.getElementById('btnConfirm').disabled = true;
+    document.getElementById('btnConfirm').textContent = 'Selecione uma ação →';
+    document.getElementById('btnConfirm').className = 'btn-confirm';
+    document.getElementById('obs-gerente').value = '';
+    document.querySelectorAll('.motivo-check input').forEach(cb => cb.checked = false);
+  } else {
+    reviewActions.style.display = 'none';
+    alreadyReviewed.style.display = 'block';
+    const card = document.getElementById('reviewedCard');
+    if (deal.status === 'aprovado') {
+      card.style.borderColor = 'rgba(16,185,129,0.3)';
+      document.getElementById('reviewedContent').innerHTML = `
+        <div style="color:var(--green);font-size:15px;font-weight:600;margin-bottom:8px">✓ Deal aprovado para pagamento de comissão</div>
+        <div style="font-size:13px;color:var(--text-muted)">Revisado em ${formatDate(deal.reviewedAt)}</div>
+      `;
+    } else {
+      card.style.borderColor = 'rgba(239,68,68,0.3)';
+      const motivosHtml = deal.motivos?.filter(Boolean).map(m => `<div style="font-size:13px;color:var(--text);margin-top:4px">· ${m}</div>`).join('') || '';
+      document.getElementById('reviewedContent').innerHTML = `
+        <div style="color:var(--red);font-size:15px;font-weight:600;margin-bottom:8px">✗ Deal bloqueado para pagamento de comissão</div>
+        ${motivosHtml}
+        ${deal.obsGerente ? `<div style="font-size:12px;color:var(--text-muted);margin-top:8px;font-style:italic">${deal.obsGerente}</div>` : ''}
+        <div style="font-size:13px;color:var(--text-muted);margin-top:12px">Revisado em ${formatDate(deal.reviewedAt)}</div>
+      `;
+    }
+  }
+
+  document.getElementById('listView').classList.add('hidden');
+  document.getElementById('detailView').classList.add('show');
+}
+
+function goBack() {
+  document.getElementById('detailView').classList.remove('show');
+  document.getElementById('listView').classList.remove('hidden');
+  currentDealId = null;
+  loadDeals(); // refresh from Sheets
+}
+
+function selectAction(action) {
+  currentAction = action;
+  document.getElementById('tgPreview').classList.remove('show');
+  if (action === 'approve') {
+    document.getElementById('motivosSection').classList.remove('show');
+    document.getElementById('btnConfirm').disabled = false;
+    document.getElementById('btnConfirm').textContent = '✓ Confirmar aprovação';
+    document.getElementById('btnConfirm').className = 'btn-confirm green';
+  } else {
+    document.getElementById('motivosSection').classList.add('show');
+    document.getElementById('btnConfirm').disabled = false;
+    document.getElementById('btnConfirm').textContent = '✗ Confirmar bloqueio';
+    document.getElementById('btnConfirm').className = 'btn-confirm red';
+  }
+}
+
+async function confirmReview() {
+  const deal = allDeals.find(d => d.id === currentDealId);
+  if (!deal) return;
+
+  const motivos = currentAction === 'block'
+    ? Array.from(document.querySelectorAll('.motivo-check input:checked')).map(cb => cb.value)
+    : [];
+  const obsGerente = document.getElementById('obs-gerente').value.trim();
+  const newStatus = currentAction === 'approve' ? 'aprovado' : 'bloqueado';
+  const reviewedAt = new Date().toISOString();
+
+  document.getElementById('btnConfirm').disabled = true;
+  document.getElementById('btnConfirm').textContent = 'Salvando…';
+
+  const payload = {
+    action: 'review',
+    id: currentDealId,
+    status: newStatus,
+    motivos,
+    obsGerente,
+    reviewedAt,
+  };
+
+  try {
+    await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+  } catch(e) { /* continue */ }
+
+  // Update local state
+  const idx = allDeals.findIndex(d => d.id === currentDealId);
+  if (idx !== -1) {
+    allDeals[idx] = { ...allDeals[idx], status: newStatus, motivos, obsGerente, reviewedAt };
+  }
+
+  // Build telegram message
+  const updatedDeal = allDeals[idx];
+  const msg = buildTelegramMsg(updatedDeal);
+  document.getElementById('tgMsg').textContent = msg;
+  document.getElementById('tgPreview').classList.add('show');
+
+  document.getElementById('det-status-badge').innerHTML = currentAction === 'approve'
+    ? '<span class="status-badge approved">✓ Aprovado</span>'
+    : '<span class="status-badge blocked">✗ Bloqueado</span>';
+}
+
+function buildTelegramMsg(deal) {
+  if (deal.status === 'aprovado') {
+    return `✅ DEAL APROVADO\n\nOlá, ${deal.vendedor}!\n\nDeal ${deal.id} — ${deal.veiculo}\nVIN: ${deal.vin}\n\nToda a documentação foi conferida e aprovada.\n\nEste deal está APTO para pagamento de comissão. 🎉`;
+  } else {
+    const motivosText = deal.motivos?.filter(Boolean).length
+      ? deal.motivos.filter(Boolean).map(m => `• ${m}`).join('\n')
+      : '• Pendências identificadas';
+    const obsText = deal.obsGerente ? `\n\nObservação: ${deal.obsGerente}` : '';
+    return `❌ DEAL NÃO APROVADO PARA COMISSÃO\n\nOlá, ${deal.vendedor}.\n\nDeal ${deal.id} — ${deal.veiculo}\nVIN: ${deal.vin}\n\nO pagamento de comissão está BLOQUEADO pelos seguintes motivos:\n\n${motivosText}${obsText}\n\nRegularize e entre em contato para liberação.`;
+  }
+}
+
+function copyMsg() {
+  const msg = document.getElementById('tgMsg').textContent;
+  navigator.clipboard.writeText(msg).then(() => {
+    const btn = document.querySelector('.btn-copy');
+    btn.textContent = '✓ Copiado!';
+    setTimeout(() => btn.textContent = 'Copiar mensagem', 2000);
+  });
+}
+
+// INIT
+loadDeals();
+</script>
+</body>
+</html>
