@@ -316,6 +316,26 @@
     line-height: 1.6;
     font-style: italic;
   }
+
+  .btn-print {
+    width: 100%;
+    padding: 13px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-print:hover { border-color: var(--blue); color: var(--blue-light); }
 </style>
 </head>
 <body>
@@ -421,10 +441,14 @@
       <div class="review-card" id="reviewedCard">
         <div id="reviewedContent"></div>
       </div>
+      <button class="btn-print" onclick="printDeal()">🖨️ Imprimir folha para pasta</button>
     </div>
 
   </div><!-- detail-view -->
 </div>
+
+<!-- PRINT FRAME (hidden) -->
+<div id="printFrame" style="display:none"></div>
 
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxb-xU0sjMzl65MoGlYKIaGLuF0Q_NpyW6Slsqtt2sRG4I2kVxOv7Lx9j6dz6aT_pYj9w/exec';
@@ -709,6 +733,118 @@ function copyMsg() {
     btn.textContent = '✓ Copiado!';
     setTimeout(() => btn.textContent = 'Copiar mensagem', 2000);
   });
+}
+
+function printDeal() {
+  const deal = allDeals.find(d => d.id === currentDealId);
+  if (!deal) return;
+
+  const statusText = deal.status === 'aprovado' ? 'APROVADO' : deal.status === 'bloqueado' ? 'BLOQUEADO' : 'EM CORREÇÃO';
+  const docsOk = (deal.docs || []).filter(d => d.status === 'ok');
+  const docsPend = (deal.docs || []).filter(d => d.status !== 'ok');
+
+  const docsOkHtml = docsOk.map(d => `
+    <tr>
+      <td style="padding:5px 8px;border-bottom:1px solid #ddd;font-size:11px;">[✓]</td>
+      <td style="padding:5px 8px;border-bottom:1px solid #ddd;font-size:11px;">${d.doc}</td>
+    </tr>`).join('');
+
+  const docsPendHtml = docsPend.map(d => `
+    <tr>
+      <td style="padding:5px 8px;border-bottom:1px solid #ddd;font-size:11px;">[ ]</td>
+      <td style="padding:5px 8px;border-bottom:1px solid #ddd;font-size:11px;font-weight:600;">${d.doc}</td>
+    </tr>`).join('');
+
+  const motivosHtml = deal.motivos?.filter(Boolean).map(m => `<li style="font-size:11px;margin-bottom:3px;">${m}</li>`).join('') || '';
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Deal ${deal.id} — ${deal.veiculo}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; color: #000; background: #fff; padding: 24px; font-size: 12px; }
+  @media print {
+    body { padding: 12px; }
+    .no-print { display: none; }
+  }
+  .header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 16px; }
+  .logo-text { font-size: 16px; font-weight: 700; letter-spacing: 0.05em; }
+  .logo-sub { font-size: 10px; color: #555; margin-top: 2px; }
+  .status-box { border: 2px solid #000; padding: 6px 16px; font-size: 13px; font-weight: 700; text-align: center; }
+  .status-box.aprovado { border-style: solid; }
+  .status-box.bloqueado { border-style: double; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; background: #f5f5f5; padding: 12px; border: 1px solid #ddd; }
+  .info-item { }
+  .info-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #555; margin-bottom: 2px; }
+  .info-value { font-size: 12px; font-weight: 600; }
+  .section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 8px; margin-top: 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  .obs-box { background: #f9f9f9; border: 1px solid #ddd; padding: 8px 10px; font-size: 11px; font-style: italic; margin-bottom: 8px; }
+  .sign-area { margin-top: 32px; display: flex; gap: 32px; }
+  .sign-line { flex: 1; border-top: 1px solid #000; padding-top: 4px; font-size: 10px; color: #555; }
+  .motivos-box { background: #f5f5f5; border: 1px solid #999; padding: 10px 12px; margin-bottom: 8px; }
+  .print-btn { margin-bottom: 16px; padding: 8px 20px; background: #000; color: #fff; border: none; cursor: pointer; font-size: 13px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">Imprimir</button>
+
+<div class="header">
+  <div>
+    <div class="logo-text">FLORIDA AUTO CENTER</div>
+    <div class="logo-sub">Conferência de Venda — Documentação</div>
+  </div>
+  <div class="status-box ${deal.status}">${statusText}</div>
+</div>
+
+<div class="info-grid">
+  <div class="info-item"><div class="info-label">Deal ID</div><div class="info-value">${deal.id}</div></div>
+  <div class="info-item"><div class="info-label">VIN</div><div class="info-value" style="font-family:monospace">${deal.vin}</div></div>
+  <div class="info-item"><div class="info-label">Veículo</div><div class="info-value">${deal.veiculo}</div></div>
+  <div class="info-item"><div class="info-label">Vendedor</div><div class="info-value">${deal.vendedor}</div></div>
+  <div class="info-item"><div class="info-label">Financiamento</div><div class="info-value">${deal.finance || '—'}</div></div>
+  <div class="info-item"><div class="info-label">Data da conferência</div><div class="info-value">${formatDate(deal.reviewedAt || deal.timestamp)}</div></div>
+</div>
+
+${docsPend.length > 0 ? `
+<div class="section-title">⚠ Documentos Pendentes</div>
+<table>
+  <tbody>${docsPendHtml}</tbody>
+</table>` : ''}
+
+<div class="section-title">Documentos Conferidos</div>
+<table>
+  <tbody>${docsOkHtml}</tbody>
+</table>
+
+${motivosHtml ? `
+<div class="section-title">Motivos do Bloqueio</div>
+<div class="motivos-box">
+  <ul style="padding-left:16px">${motivosHtml}</ul>
+</div>` : ''}
+
+${deal.obs ? `
+<div class="section-title">Observação do Vendedor</div>
+<div class="obs-box">${deal.obs}</div>` : ''}
+
+${deal.obsGerente ? `
+<div class="section-title">Observação da Gerência</div>
+<div class="obs-box">${deal.obsGerente}</div>` : ''}
+
+<div class="sign-area">
+  <div class="sign-line">Assinatura — Gerência &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+  <div class="sign-line">Data &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>
+</div>
+
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
 }
 
 // INIT
