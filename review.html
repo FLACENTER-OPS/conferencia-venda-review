@@ -87,6 +87,7 @@
   .dot-pending { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
   .dot-approved { background: var(--green); }
   .dot-blocked { background: var(--red); }
+  .dot-correcao { background: var(--blue-light); box-shadow: 0 0 8px var(--blue-light); }
 
   .deal-info { flex: 1; }
   .deal-id-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
@@ -502,7 +503,9 @@ function buildDealCard(deal) {
   card.onclick = () => openDeal(deal.id);
 
   const dotClass = deal.status === 'aguardando_revisao' ? 'dot-pending'
-    : deal.status === 'aprovado' ? 'dot-approved' : 'dot-blocked';
+    : deal.status === 'aprovado' ? 'dot-approved'
+    : deal.status === 'em_correcao' ? 'dot-correcao'
+    : 'dot-blocked';
 
   const pendsHtml = deal.pendentes?.length > 0
     ? deal.pendentes.slice(0, 3).map(p => `<span class="tag-pendente">${p.split(' — ')[0]}</span>`).join('') +
@@ -513,6 +516,8 @@ function buildDealCard(deal) {
     ? '<span class="tag-ok">✓ Aprovado</span>'
     : deal.status === 'bloqueado'
     ? '<span class="tag-blocked">✗ Bloqueado</span>'
+    : deal.status === 'em_correcao'
+    ? '<span class="tag-ok" style="background:rgba(37,99,235,0.12);color:var(--blue-light);border-color:rgba(37,99,235,0.3)">✏️ Em correção</span>'
     : '';
 
   card.innerHTML = `
@@ -545,6 +550,7 @@ function openDeal(id) {
     aguardando_revisao: '<span class="status-badge pending">● Aguardando revisão</span>',
     aprovado: '<span class="status-badge approved">✓ Aprovado</span>',
     bloqueado: '<span class="status-badge blocked">✗ Bloqueado</span>',
+    em_correcao: '<span class="status-badge" style="background:rgba(37,99,235,0.12);color:var(--blue-light);border:1px solid rgba(37,99,235,0.3)">✏️ Em correção</span>',
   };
   const badgeEl = document.getElementById('det-status-badge');
   badgeEl.innerHTML = badgeMap[deal.status] || '';
@@ -568,7 +574,7 @@ function openDeal(id) {
   const reviewActions = document.getElementById('reviewActions');
   const alreadyReviewed = document.getElementById('alreadyReviewed');
 
-  if (deal.status === 'aguardando_revisao') {
+  if (deal.status === 'aguardando_revisao' || deal.status === 'em_correcao') {
     reviewActions.style.display = 'block';
     alreadyReviewed.style.display = 'none';
     document.getElementById('motivosSection').classList.remove('show');
@@ -684,6 +690,7 @@ async function confirmReview() {
 }
 
 function buildTelegramMsg(deal) {
+  const link = 'https://flacenter-ops.github.io/conferencia-venda/';
   if (deal.status === 'aprovado') {
     return `✅ DEAL APROVADO\n\nOlá, ${deal.vendedor}!\n\nDeal ${deal.id} — ${deal.veiculo}\nVIN: ${deal.vin}\n\nToda a documentação foi conferida e aprovada.\n\nEste deal está APTO para pagamento de comissão. 🎉`;
   } else {
@@ -691,7 +698,7 @@ function buildTelegramMsg(deal) {
       ? deal.motivos.filter(Boolean).map(m => `• ${m}`).join('\n')
       : '• Pendências identificadas';
     const obsText = deal.obsGerente ? `\n\nObservação: ${deal.obsGerente}` : '';
-    return `❌ DEAL NÃO APROVADO PARA COMISSÃO\n\nOlá, ${deal.vendedor}.\n\nDeal ${deal.id} — ${deal.veiculo}\nVIN: ${deal.vin}\n\nO pagamento de comissão está BLOQUEADO pelos seguintes motivos:\n\n${motivosText}${obsText}\n\nRegularize e entre em contato para liberação.`;
+    return `❌ DEAL NÃO APROVADO PARA COMISSÃO\n\nOlá, ${deal.vendedor}.\n\nDeal ${deal.id} — ${deal.veiculo}\nVIN: ${deal.vin}\n\nO pagamento de comissão está BLOQUEADO pelos seguintes motivos:\n\n${motivosText}${obsText}\n\nPara corrigir, acesse:\n${link}\n\nDigite o Deal ID ${deal.id} e siga as instruções.`;
   }
 }
 
